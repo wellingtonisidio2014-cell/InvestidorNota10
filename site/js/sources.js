@@ -20,9 +20,9 @@ function renderSources() {
     } else if(source.id==='cvm'&&source.data) {
       card.append(element('strong',`${source.data.length} emissores`,'official-value'),element('p','Razão social, CNPJ, situação do registro e setor nos detalhes de cada ação.','muted'));
     } else card.append(element('p','Sem dados disponíveis nesta consulta. Nenhum valor estimado foi inserido.','muted'));
-    card.append(element('p',source.scope,'source-scope'),element('small',`Coleta: ${time(source.fetchedAt)} (Brasília)`));
-    if(source.sourceUpdatedAt)card.append(element('small',`Arquivo atualizado: ${time(source.sourceUpdatedAt)}`));
-    card.append(link(source));container.append(card);
+    const audit=element('details',undefined,'source-audit');audit.append(element('summary','Origem e coleta'),element('p',source.scope,'source-scope'),element('small',`Coleta: ${time(source.fetchedAt)} (Brasília)`));
+    if(source.sourceUpdatedAt)audit.append(element('small',`Arquivo atualizado: ${time(source.sourceUpdatedAt)}`));
+    audit.append(link(source));card.append(audit);container.append(card);
   }
   document.getElementById('sources-note').textContent=snapshot.note;
 }
@@ -43,7 +43,7 @@ export function loadSources() {
     try {
       const data=await loadContext();if(!Array.isArray(data.sources))throw new Error('Resposta inválida');
       snapshot=data;renderSources();
-      const detail=document.querySelector('[data-issuer]');if(detail)renderIssuer(detail,detail.dataset.issuer);
+      for(const detail of document.querySelectorAll('[data-issuer]'))renderIssuer(detail,detail.dataset.issuer);
     }catch{
       if(snapshot){snapshot={...snapshot,sources:snapshot.sources.map(source=>({...source,status:source.data?'stale':'unavailable'}))};renderSources();}
       else document.getElementById('official-cards').replaceChildren(element('p','As fontes oficiais estão indisponíveis nesta consulta. Tente atualizar.','empty'));

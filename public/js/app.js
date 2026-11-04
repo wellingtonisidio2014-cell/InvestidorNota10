@@ -1,3 +1,4 @@
+import {PERIODS, createHistoryLoader, periodSummary} from './history-data.js';
 import {initExpandedChart} from './chart-expanded.js';
 import {initAlerts, processAlerts} from './alerts.js';
 import {loadSources, renderIssuer} from './sources.js';
@@ -7,7 +8,7 @@ import {renderHistory} from './chart.js';
 import {assetsToCSV} from './export.js';
 import { selectAssets, money, decimal, upcomingDividends } from './domain.js';
 const $ = id => document.getElementById(id);
-const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', chartCount: 0, page: 1, sector:'all', data: null };
+const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', chartRange: '1mo', page: 1, sector:'all', data: null };
 try {
   const saved = JSON.parse(localStorage.getItem('in10-favorites') || '[]');
   if (Array.isArray(saved)) state.favorites = saved.filter(id => typeof id === 'string');
@@ -53,10 +54,10 @@ function renderTable() {
   $('rows').replaceChildren();
   $('count').textContent = `${assets.length} ${assets.length === 1 ? 'ativo encontrado' : 'ativos encontrados'}${state.favoritesOnly ? ' · favoritos' : ''}`;
   $('favorites').setAttribute('aria-pressed', String(state.favoritesOnly));
-  const pages=Math.max(1,Math.ceil(assets.length/15)); state.page=Math.min(state.page,pages);
-  $('page-status').textContent=`Página ${state.page} de ${pages} · ${assets.length} ativos`;
+  const pages=Math.max(1,Math.ceil(assets.length/8)); state.page=Math.min(state.page,pages);
+  $('page-status').textContent=`Página ${state.page} de ${pages} · ${assets.length} ${assets.length===1?'ativo':'ativos'}`;
   $('page-prev').disabled=state.page===1; $('page-next').disabled=state.page===pages;
-  for (const asset of assets.slice((state.page-1)*15,state.page*15)) {
+  for (const asset of assets.slice((state.page-1)*8,state.page*8)) {
     const row = element('tr');
     const identity = element('td');
     const button = element('button', asset.ticker, 'ticker');
@@ -139,20 +140,60 @@ function renderSummary() {
   $('summary-dividend').textContent = next ? next.ticker : 'Sem evento';
   $('summary-dividend-note').textContent = next ? `${dateLabel(next.paymentDate)} · ${money(next.amount)} por unidade` : 'Nenhum futuro informado pela fonte';
 }
-function renderChart() {
-  const select = $('chart-asset'); select.replaceChildren();
-  const chartAssets=state.assets.filter(a=>a.history?.length>1);
-  for (const asset of chartAssets) { const option = element('option', asset.ticker); option.value = asset.id; select.append(option); }
-  if (!chartAssets.some(a => a.id === state.chartId)) state.chartId = chartAssets[0]?.id || '';
-  select.value = state.chartId;
-  const asset = state.assets.find(a=>a.id===state.chartId);
-  $('chart-expand').disabled=!asset;
+const loadHistory = createHistoryLoader();
+let chartRequest = 0;
+function renderChartQuote(asset) {
+  $('chart-name').textContent = asset ? `${asset.ticker} · ${asset.name}` : 'Histórico indisponível';
   $('chart-price').textContent = money(asset?.price);
   $('chart-change').textContent = percent(asset?.change);
   $('chart-change').className = `change ${tone(asset?.change)}`;
-  $('chart-source').textContent = asset ? `${state.data?.source || "Fonte"} · cotação em ${timestamp(asset.asOf)} (Brasília)` : '';
-  renderHistory($('chart'),asset,state.chartCount);
+  $('facts-ticker').textContent = asset?.ticker || '';
+  $('chart-source').textContent = asset ? `brapi.dev · cotação: ${timestamp(asset.asOf)} (Brasília)` : '';
+  $('chart-facts').replaceChildren();
+  const compactMoney = value => value == null ? '—' : new Intl.NumberFormat('pt-BR', {style:'currency',currency:'BRL',notation:'compact',maximumFractionDigits:2}).format(value);
+  for (const [label,value] of [['Abertura',money(asset?.open)],['Máxima do dia',money(asset?.dayHigh)],['Mínima do dia',money(asset?.dayLow)],['Volume',asset?.volume == null ? '—' : new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:2}).format(asset.volume)],['P/L',decimal(asset?.pe)],['Valor de mercado',compactMoney(asset?.marketCap)]]) {
+    const row=element('div'); row.append(element('dt',label),element('dd',value)); $('chart-facts').append(row);
+  }
 }
+async function renderChart() {
+  const sequence=++chartRequest, chosen=state.chartRange;
+  const select = $('chart-asset'); select.replaceChildren();
+  const chartAssets=state.assets.filter(a=>a.history?.length>1);
+  for (const asset of chartAssets) { const option = element('option', asset.ticker); option.value = asset.id; select.append(option); }
+  if (!chartAssets.some(a => a.id === state.chartId)) state.chartId = chartAssets.find(a=>a.ticker==='PETR4')?.id || chartAssets[0]?.id || '';
+  select.value = state.chartId;
+  const asset = state.assets.find(a=>a.id===state.chartId);
+  $('chart-expand').disabled=!asset; select.disabled=!asset;
+  renderChartQuote(asset);
+  for(const button of $('chart-period').children)button.setAttribute('aria-pressed',String(button.dataset.range===chosen));
+  $('chart-performance').textContent='Consultando histórico…';
+  $('chart-performance').className='muted';
+  $('chart').replaceChildren(element('p',asset?'Consultando histórico…':'Histórico não disponível na cobertura carregada.','empty'));
+  if(!asset){$('chart-performance').textContent='Sem histórico disponível';return;}
+  $('chart').setAttribute('aria-busy','true');
+  try {
+    const result=chosen==='1mo' ? {asset,period:PERIODS.find(p=>p.key===chosen)} : await loadHistory(asset,chosen);
+    if(sequence!==chartRequest)return;
+    renderChartQuote(result.asset);
+    renderHistory($('chart'),result.asset,0,{intraday:result.period.intraday,caption:result.period.intraday?'Fechamento do intervalo · Brasília':result.period.caption});
+    const summary=periodSummary(result.asset.history);
+    const date=value=>new Date(value).toLocaleDateString('pt-BR',{timeZone:result.period.intraday?'America/Sao_Paulo':'UTC'});
+    $('chart-performance').textContent=`${percent(summary.change)} · ${date(summary.first)} a ${date(summary.last)}`;
+    $('chart-performance').className=tone(summary.change);
+    $('chart-performance').title='Variação entre o primeiro e o último fechamento retornado. Não inclui proventos.';
+  } catch(error) {
+    if(sequence!==chartRequest)return;
+    $('chart').replaceChildren(element('p',error.message||'Histórico indisponível nesta consulta.','empty'));
+    $('chart-performance').textContent='Selecione outro período ou atualize.';
+  } finally { if(sequence===chartRequest)$('chart').setAttribute('aria-busy','false'); }
+}
+for(const period of PERIODS){
+  const button=element('button',period.label);button.type='button';button.dataset.range=period.key;
+  button.setAttribute('aria-pressed',String(period.key===state.chartRange));$('chart-period').append(button);
+}
+$('chart-details').addEventListener('click',event=>{
+  const asset=state.assets.find(a=>a.id===state.chartId);if(asset){event.preventDefault();showDetails(asset);}
+});
 async function load() {
   if (loading) return;
   loading = true; $('refresh').disabled = true; $('refresh').textContent = 'Consultando…'; $('explorar').setAttribute('aria-busy','true');
@@ -189,8 +230,8 @@ $('close').onclick = () => $('details').close();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(() => { if (!document.hidden) load(); }, 60000);
 $('chart-period').addEventListener('click', event => {
-  const button = event.target.closest('[data-count]'); if (!button) return;
-  state.chartCount = Number(button.dataset.count);
+  const button = event.target.closest('[data-range]'); if (!button) return;
+  state.chartRange = button.dataset.range;
   for (const item of $('chart-period').querySelectorAll('button')) item.setAttribute('aria-pressed',String(item===button));
   renderChart();
 });
@@ -205,6 +246,6 @@ $('sector').addEventListener('change',event=>{state.sector=event.target.value;st
 $('page-prev').addEventListener('click',()=>{state.page=Math.max(1,state.page-1);renderTable();});
 $('page-next').addEventListener('click',()=>{state.page++;renderTable();});
 initAlerts(id=>{const asset=state.assets.find(a=>a.id===id);if(asset)showDetails(asset);else toast('Ativo fora da cobertura carregada neste momento.');});
-initExpandedChart(()=>state.assets,()=>state.chartId);
+initExpandedChart(()=>state.assets,()=>state.chartId,{getPeriod:()=>state.chartRange,loadHistory});
 initMotion(); initInteractions(); load(); loadSources();
 setInterval(()=>{if(!document.hidden)loadSources();},3600000);

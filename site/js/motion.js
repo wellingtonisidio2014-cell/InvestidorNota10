@@ -26,5 +26,5 @@ export function initMotion() {
   button.addEventListener('click', () => { disabled = !disabled; try { localStorage.setItem('n10-motion', disabled ? 'off' : 'on'); } catch {} update(); });
   preference.addEventListener('change', update);
   update();
-  reveal('.hero-copy, .hero-art, .summary-card, .dashboard > .card');
+  reveal('.page-title, .market-strip, .dashboard > .card, .right-rail > .card');
 }

@@ -22,6 +22,9 @@ function render(){
   const log=readLog(),unread=log.entries.filter(e=>!e.read).length;
   $('alert-badge').textContent=unread?String(unread):'0';$('alert-open').setAttribute('aria-label',`Notificações: ${unread} não lidas`);
   $('alerts-summary').textContent=rule.enabled?`Monitorando ${rule.scope==='favorites'?'ações favoritas':'ações carregadas'} · ${rule.direction==='up'?'altas':rule.direction==='down'?'quedas':'altas e quedas'} a partir de ${decimal(rule.threshold)}%.`:'Monitoramento pausado.';
+  $('alert-card-rule').textContent=$('alerts-summary').textContent;
+  $('alert-card-state').textContent=unread?`${unread} aviso${unread===1?'':'s'} não lido${unread===1?'':'s'}`:rule.enabled?'Radar ativo':'Radar pausado';
+  $('alert-quick-enabled').checked=rule.enabled;
   $('desktop-status').textContent=permissionText();$('desktop-enable').textContent=desktop?'Desativar avisos do navegador':'Ativar avisos do navegador';
   const container=$('alerts-history');container.replaceChildren();
   for(const entry of log.entries){
@@ -63,6 +66,13 @@ export function initAlerts(onOpenAsset){
   openAsset=onOpenAsset;
   $('alert-enabled').checked=rule.enabled;$('alert-threshold').value=rule.threshold;$('alert-direction').value=rule.direction;$('alert-scope').value=rule.scope;
   $('alert-open').addEventListener('click',()=>{$('alerts-dialog').showModal();render();});
+  $('alert-card-open').addEventListener('click',()=>{$('alerts-dialog').showModal();render();});
+  $('alert-quick-enabled').addEventListener('change',event=>{
+    rule={...rule,enabled:event.target.checked};$('alert-enabled').checked=rule.enabled;
+    const saved=write(RULE,rule);render();
+    toast(`${rule.enabled?'Monitoramento ativado.':'Monitoramento pausado.'}${saved?'':' Preferência mantida apenas nesta sessão.'}`);
+    if(lastSnapshot)processAlerts(lastSnapshot,lastFavorites);
+  });
   $('alerts-close').addEventListener('click',()=>$('alerts-dialog').close());
   $('alerts-form').addEventListener('submit',event=>{
     event.preventDefault();
@@ -79,6 +89,6 @@ export function initAlerts(onOpenAsset){
     const log=readLog();const sample={key:`test-${Date.now()}`,isTest:true,ticker:'TESTE',change:5,price:10,observedAt:new Date().toISOString()};
     saveLog({...log,entries:[sample,...log.entries].slice(0,50)});render();$('alerts-status').textContent='Exemplo fictício adicionado ao histórico. Nenhum evento real foi gerado.';
   });
-  window.addEventListener('storage',event=>{if(event.key===KEY)render();if(event.key===RULE){try{rule=validateRule(read(RULE,defaultRule));render();}catch{}}});
+  window.addEventListener('storage',event=>{if(event.key===KEY)render();if(event.key===RULE){try{rule=validateRule(read(RULE,defaultRule));$('alert-enabled').checked=rule.enabled;$('alert-threshold').value=rule.threshold;$('alert-direction').value=rule.direction;$('alert-scope').value=rule.scope;render();}catch{}}});
   render();
 }

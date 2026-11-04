@@ -7,8 +7,8 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefine
 const stamp=value=>value?new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Não informado';
 const date=value=>new Date(value).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
 const pct=value=>value==null?'—':`${value>0?'+':''}${decimal(value)}%`;
-export function initExpandedChart(getAssets,getSelected) {
- const dialog=$('expanded-chart'),loadHistory=createHistoryLoader();let asset,period='1mo',request=0,returnFocus;
+export function initExpandedChart(getAssets,getSelected,{getPeriod=()=> '1mo',loadHistory=createHistoryLoader()}={}) {
+ const dialog=$('expanded-chart');let asset,period='1mo',request=0,returnFocus;
  const setState=message=>{$('expanded-status').textContent=message;};
  function metrics(current){
   $('expanded-name').textContent=`${current.ticker} · ${current.name}`;
@@ -43,7 +43,7 @@ export function initExpandedChart(getAssets,getSelected) {
  for(const item of PERIODS){const button=el('button',item.label);button.type='button';button.dataset.range=item.key;button.setAttribute('aria-pressed',String(item.key===period));button.onclick=()=>{period=item.key;refresh();};$('expanded-periods').append(button);}
  $('chart-expand').addEventListener('click',()=>{
   const assets=getAssets().filter(a=>a.history?.length>1);if(!assets.length)return;
-  returnFocus=document.activeElement;$('expanded-asset').replaceChildren();
+  period=getPeriod();returnFocus=document.activeElement;$('expanded-asset').replaceChildren();
   for(const item of assets){const option=el('option',`${item.ticker} · ${item.name}`);option.value=item.id;$('expanded-asset').append(option);}
   dialog.showModal();document.body.classList.add('chart-is-expanded');choose(assets.some(a=>a.id===getSelected())?getSelected():assets[0].id);
  });

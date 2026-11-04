@@ -16,7 +16,6 @@ export function initInteractions() {
   const help = document.getElementById('help-dialog');
   document.getElementById('help-open').addEventListener('click', () => help.showModal());
   document.getElementById('help-close').addEventListener('click', () => help.close());
-  document.getElementById('focus-search').addEventListener('click', () => { search.focus(); search.scrollIntoView({block:'center'}); });
   document.getElementById('density').addEventListener('click', event => {
     const compact = document.body.classList.toggle('compact');
     event.currentTarget.setAttribute('aria-pressed', String(compact));

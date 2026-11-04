@@ -12,8 +12,8 @@ export function renderHistory(container,asset,count=0,{expanded=false,intraday=f
  container.replaceChildren();
  const history=count?(asset?.history||[]).slice(-count):asset?.history||[];
  if(history.length<2){const message=document.createElement('p');message.className='empty';message.textContent='O histórico aparecerá quando a fonte retornar dados para este ativo.';container.append(message);return;}
- const narrow=expanded&&container.clientWidth<600;
- const width=expanded&&!narrow?1000:580,height=expanded?(narrow?340:400):232,left=expanded?78:58,right=width-22,top=expanded?35:28,base=height-42;
+ const narrow=container.clientWidth<600;
+ const width=expanded&&!narrow?1000:Math.max(280,Math.min(580,container.clientWidth)),height=expanded?(narrow?340:400):196,left=expanded&&!narrow?78:48,right=width-22,top=expanded?35:28,base=height-42;
  const low=Math.min(...history.map(p=>p.close)),high=Math.max(...history.map(p=>p.close));
  const padding=(high-low)*.1||Math.max(low*.01,.1),bottom=low-padding,span=high-low+padding*2;
  const x=index=>left+index/(history.length-1)*(right-left),y=value=>base-5-(value-bottom)/span*(base-top-12);
