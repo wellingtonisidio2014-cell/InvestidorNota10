@@ -36,4 +36,7 @@ sources=replaceOnce(sources,"return source.status==='available'", "return source
 await writeFile(join(out,'js/sources.js'),"import {loadContext} from './pages-data.js';\n"+sources);
 await cp(join(root,'scripts/pages-data.js'),join(out,'js/pages-data.js'));
 await writeFile(join(out,'.nojekyll'),'');
+// main/(root) publishing also works: the root entry redirects into this generated site.
+await rm(join(root,'site'),{recursive:true,force:true});
+await cp(out,join(root,'site'),{recursive:true});
 console.log(JSON.stringify({directory:out,registryRecords:data.length,mode:'public APIs without credentials'}));

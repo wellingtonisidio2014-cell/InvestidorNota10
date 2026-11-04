@@ -73,3 +73,7 @@ O botão Expandir abre um diálogo que ocupa toda a área da página; Fechar/Esc
 A variação do período compara primeiro e último fechamento retornado, sem proventos, e aparece separada da variação diária da cotação. Abertura, máxima/mínima diária, fechamento anterior, volume, valor de mercado, P/L, lucro por ação e faixa de 52 semanas são campos da resposta; ausências permanecem “—”. Cadastro CVM aparece abaixo, com sua própria data de coleta.
 
 A integração reaproveita o endpoint v1 já utilizado pelo projeto. Consultas do gráfico são diretas à brapi, sem token de usuário; cache de 60 segundos por ativo/período, deduplicação de solicitações simultâneas, validação de ticker/moeda/período/intervalo e descarte de respostas antigas após troca rápida. Nenhuma carteira pessoal foi adicionada nesta versão.
+
+### Publicação atual em main/(root)
+
+A configuração do Pages foi verificada nos logs do deploy: ela usa `main` e a raiz. Por isso `index.html` encaminha para `site/`, cópia estática gerada por `npm run build:pages`. Esse comando gera tanto `dist-pages/` quanto `site/`; envie `site/` junto com as mudanças em `main`. O marcador `.nojekyll` preserva os arquivos sem transformação. A branch `gh-pages` continua contendo uma versão estática na raiz, caso a configuração de hospedagem seja alterada depois. Não edite os arquivos de `site/` manualmente; altere `public/` ou os adaptadores em `scripts/` e refaça o build.

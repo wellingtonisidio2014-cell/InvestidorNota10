@@ -1,0 +1,4 @@
+export const catalog = [
+ ['BR-PETR4','PETR4','Petrobras','stock','Petróleo e gás'], ['BR-VALE3','VALE3','Vale','stock','Mineração'], ['BR-ITUB4','ITUB4','Itaú Unibanco','stock','Bancos'], ['BR-MGLU3','MGLU3','Magazine Luiza','stock','Varejo'], ['BR-MXRF11','MXRF11','Maxi Renda','fii','Papel'], ['BR-HGLG11','HGLG11','Pátria Log','fii','Logística'], ['BR-XPML11','XPML11','XP Malls','fii','Shopping'], ['BR-KNCR11','KNCR11','Kinea Rendimentos','fii','Papel']
+].map(([id,ticker,name,type,sector])=>({id,ticker,name,type,sector}));
+export const demo = catalog.map((asset,i)=>({...asset,price:[32.40,55.80,34.20,8.10,9.30,155.20,101.50,103.40][i],change:[1.24,-0.82,0.45,-1.10,0.22,0.71,-0.34,0.12][i],dy:[10.2,8.4,7.1,null,12.5,8.7,10.1,12.9][i],pb:[1.1,1.4,1.8,0.9,0.98,0.94,0.96,1.02][i],pe:i<4?[5.2,6.8,9.2,null][i]:null,asOf:null}));
