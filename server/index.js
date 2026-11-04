@@ -1,12 +1,14 @@
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import {createOfficialProvider} from './official-sources.js';
 import {createProvider} from './provider.js';
 const files=new Map([['/',['index.html','text/html']],['/favicon.svg',['favicon.svg','image/svg+xml']],['/styles.css',['styles.css','text/css']],['/js/app.js',['js/app.js','text/javascript']],['/js/domain.js',['js/domain.js','text/javascript']]]);
-for (const name of ['motion','interactions','chart','export']) files.set(`/js/${name}.js`, [`js/${name}.js`, 'text/javascript']);
+for (const name of ['motion','interactions','chart','export','curve','sources']) files.set(`/js/${name}.js`, [`js/${name}.js`, 'text/javascript']);
 for (const name of ['radar-orbit','icons']) files.set(`/art/${name}.svg`, [`art/${name}.svg`, 'image/svg+xml']);
 files.set('/vendor/gsap-3.15.1.min.js',['vendor/gsap-3.15.1.min.js','text/javascript']);
 export function makeServer(provider=createProvider({mode:process.env.DATA_PROVIDER||'brapi',token:process.env.BRAPI_TOKEN||''})) {
+ const officialProvider=createOfficialProvider();
  return createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
@@ -14,6 +16,7 @@ export function makeServer(provider=createProvider({mode:process.env.DATA_PROVID
   if(req.method!=='GET'){res.writeHead(405,{'Allow':'GET'});res.end();return;}
   const path=new URL(req.url,'http://localhost').pathname;
   try {
+   if(path==='/api/context'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(await officialProvider()));return;}
    if(path==='/api/assets') {const data=await provider();res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));return;}
    const entry=files.get(path);
    if(!entry){res.writeHead(404);res.end('Página não encontrada');return;}

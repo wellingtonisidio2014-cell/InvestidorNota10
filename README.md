@@ -35,3 +35,11 @@ GSAP 3.15.1 é servido localmente, com aviso original de licença em public/vend
 Novidades: ilustração SVG original, ícones vetoriais, resumo apenas da cobertura carregada, períodos de 5/10 pregões ou mês disponível, cursor no gráfico e controle acessível por teclado, desfazer favorito, barra de comparação, remoção individual, densidade de tabela, CSV filtrado com fonte/horários e proteção contra fórmulas em campos textuais. Atalhos / (busca), ? (ajuda) e Esc (fechar diálogo).
 
 Módulos: chart.js (gráfico), motion.js (GSAP e preferências), interactions.js (atalhos e feedback), export.js (CSV). Não há imagens externas nem scripts de CDN em tempo de execução.
+
+## Gráfico e fontes oficiais (v3)
+
+A curva usa interpolação cúbica monotônica, preservando os fechamentos e sem criar máximas/mínimas entre pontos. O destaque identifica o pregão real mais próximo, nunca um preço interpolado. Barra inferior removida: mouse/toque selecionam o ponto; com o gráfico em foco, ←/→, Home e End navegam. Data completa, valor, guia vertical e rótulo no eixo destacam a seleção.
+
+`GET /api/context` acrescenta três integrações oficiais independentes: Banco Central (meta Selic SGS 432, % a.a.), IBGE/SIDRA (IPCA mensal nacional, tabela 1737/variável 63, % no mês) e CVM (cadastro dos quatro emissores). A associação ticker/emissor é curada e o cadastro é cruzado por código CVM + CNPJ. Balanços, indicadores contábeis e preço B3 direto ainda não estão integrados. Essas fontes não validam automaticamente a cotação brapi.
+
+Cada fonte mostra unidade, período de referência quando aplicável, origem, coleta e falha/stale. Cache independente de 6 h por processo/isolate; falha preserva snapshot anterior e pausa consultas dessa fonte por 15 min. Janela do IPCA é mensal; não deve ser apresentada como dado em tempo real. CVM retorna apenas campos cadastrais do emissor, sem contatos pessoais.

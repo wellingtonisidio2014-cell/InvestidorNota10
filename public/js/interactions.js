@@ -31,10 +31,11 @@ export function initInteractions() {
   let scheduled = false;
   function updateNavigation() {
     scheduled = false;
-    let current = links[0];
+    let current = links[0], closest = -Infinity;
     for (const link of links) {
       const section = document.querySelector(link.hash);
-      if (section && section.getBoundingClientRect().top <= 180) current = link;
+      const top = section?.getBoundingClientRect().top;
+      if (top !== undefined && top <= 180 && top > closest) { current = link; closest = top; }
     }
     for (const link of links) {
       link.classList.toggle('active', link === current);

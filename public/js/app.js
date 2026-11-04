@@ -1,3 +1,4 @@
+import {loadSources, renderIssuer} from './sources.js';
 import {initMotion, reveal} from './motion.js';
 import {initInteractions, toast} from './interactions.js';
 import {renderHistory} from './chart.js';
@@ -40,6 +41,7 @@ function showDetails(asset) {
     element('p', `Última consulta bem-sucedida: ${timestamp(state.data.fetchedAt)}.`),
     element('p', 'Atualização da tela a cada 60 segundos. A cotação pode estar atrasada; o horário da fonte prevalece. DY e P/VP não são fornecidos nesta integração inicial.')
   );
+  const issuer=element('section',undefined,'issuer-data'); issuer.dataset.issuer=asset.ticker; renderIssuer(issuer,asset.ticker); $('detail-content').append(issuer);
   $('details').showModal(); reveal($('details')); 
 }
 function renderTable() {
@@ -168,7 +170,7 @@ $('favorites').onclick = () => { state.favoritesOnly = !state.favoritesOnly; ren
 function clearComparison() { state.selected = []; renderTable(); renderComparison(); }
 $('clear').addEventListener('click',clearComparison);
 $('tray-clear').addEventListener('click',clearComparison);
-$('refresh').onclick = load;
+$('refresh').addEventListener('click',()=>{load();loadSources();});
 $('close').onclick = () => $('details').close();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(() => { if (!document.hidden) load(); }, 60000);
@@ -185,4 +187,5 @@ $('export-csv').addEventListener('click', () => {
   const link = element('a'); link.href=url; link.download=`radar-n10-${todayInBrazil()}.csv`; link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000); toast(`${assets.length} ${assets.length === 1 ? "ativo exportado" : "ativos exportados"} com origem e horário.`);
 });
-initMotion(); initInteractions(); load();
+initMotion(); initInteractions(); load(); loadSources();
+setInterval(()=>{if(!document.hidden)loadSources();},3600000);

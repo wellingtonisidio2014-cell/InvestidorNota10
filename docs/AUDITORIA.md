@@ -81,3 +81,11 @@ O primeiro painel tinha hierarquia visual limitada, gráfico sem exploração e 
 Quinze testes passaram, incluindo CSV com ausências, números negativos, escape de aspas e proteção contra fórmulas externas. No navegador, foram verificados abertura/fechamento da ajuda, densidade, exportação vazia, favorito/desfazer, seleção/limpeza de comparação, busca filtrada, período de cinco pregões, leitura do gráfico pelo teclado e desligamento de animações. Os testes de interface utilizaram servidor de QA isolado e claramente rotulado com valores fictícios; nenhum fixture desse servidor é incluído na publicação. A integração real e a audiência privada foram preservadas.
 
 Documentação técnica consultada: https://gsap.com/docs/v3/GSAP/gsap.matchMedia()/ ; pacote oficial GSAP 3.15.1 obtido do registro npm, aviso original preservado. A data dos fechamentos diários usa UTC para evitar deslocamento de candles à véspera; horário da cotação continua em Brasília.
+
+## Gráfico preciso e fontes oficiais — 04/11/2026
+
+Removido o controle range sob o gráfico. Curva monotônica testada para atravessar os pontos sem ultrapassar extremos dos trechos; destaque seleciona sempre observação real. Guia vertical, halo, rótulo de data e cartão com fechamento; seleção preservada por ativo e teclado no gráfico.
+
+Integrações oficiais efetivamente consultadas: SGS 432 do Banco Central, IPCA mensal variável 63/tabela 1737 do IBGE e cadastro de companhias abertas da CVM. Não confundir variável 2266 (número-índice) com variação do IPCA: a integração verifica código, território e unidade. Cadastro cruza código CVM e CNPJ; sem dados pessoais de responsáveis. Cotação e proventos permanecem atribuídos à brapi.
+
+No navegador de QA, o gráfico foi conferido com dados fictícios explicitamente rotulados; Home/→ alteraram data e valor sem slider. As três fontes oficiais responderam com dados reais na mesma revisão, e o modal PETR4 exibiu razão social, CNPJ, código, situação, setor e datas da CVM. Validação móvel não executada. Suíte ampliada para 24 testes, incluindo datas inválidas, falha independente, cache, CSV e interpolação.
