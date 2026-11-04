@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeServer} from '../server/index.js';
+test('HTTP entrega HTML/API, bloqueia arquivos privados e métodos de escrita',async t=>{const s=makeServer(async()=>({mode:'demo',assets:[]}));await new Promise(r=>s.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>s.close(r)));const url=`http://127.0.0.1:${s.address().port}`;const home=await fetch(url);assert.equal(home.status,200);assert.match(await home.text(),/InvestidorNota10/);assert.ok(home.headers.get('content-security-policy'));assert.equal((await fetch(url+'/.env')).status,404);assert.equal((await fetch(url+'/api/assets',{method:'POST'})).status,405);assert.equal((await (await fetch(url+'/api/assets')).json()).mode,'demo')});
+test('falha de fonte retorna 503 sem detalhes sensíveis',async t=>{const s=makeServer(async()=>{throw Error('secret-token')});await new Promise(r=>s.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>s.close(r)));const res=await fetch(`http://127.0.0.1:${s.address().port}/api/assets`);assert.equal(res.status,503);assert.doesNotMatch(await res.text(),/secret-token/)});
