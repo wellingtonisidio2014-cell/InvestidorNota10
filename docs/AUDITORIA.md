@@ -89,3 +89,11 @@ Removido o controle range sob o gráfico. Curva monotônica testada para atraves
 Integrações oficiais efetivamente consultadas: SGS 432 do Banco Central, IPCA mensal variável 63/tabela 1737 do IBGE e cadastro de companhias abertas da CVM. Não confundir variável 2266 (número-índice) com variação do IPCA: a integração verifica código, território e unidade. Cadastro cruza código CVM e CNPJ; sem dados pessoais de responsáveis. Cotação e proventos permanecem atribuídos à brapi.
 
 No navegador de QA, o gráfico foi conferido com dados fictícios explicitamente rotulados; Home/→ alteraram data e valor sem slider. As três fontes oficiais responderam com dados reais na mesma revisão, e o modal PETR4 exibiu razão social, CNPJ, código, situação, setor e datas da CVM. Validação móvel não executada. Suíte ampliada para 24 testes, incluindo datas inválidas, falha independente, cache, CSV e interpolação.
+
+## Ações ampliadas e alertas — 04/11/2026
+
+Consulta real da lista pública da brapi retornou 50 ações sem chave, agregadas às quatro consultas detalhadas. Registro de horário continua ausente nas linhas da lista e é mostrado como tal. A expansão não fornece automaticamente fundamentos, proventos, histórico ou cadastro CVM dos novos emissores.
+
+Central de alertas implementada com regras locais, limite padrão 5%, deduplicação e histórico. Respostas demonstrativas/stale e horários conhecidos antigos não geram alertas. Lista sem timestamp pode gerar aviso rotulado como variação informada sem garantia de atualidade. Funcionamento apenas com aplicação aberta; sem push em segundo plano.
+
+32 testes automatizados passaram (regras, limites, direção, favoritos, deduplicação, horários, normalização e junção, além da suíte anterior). Navegador usando backend Node real confirmou 50 ações, busca BBDC3/BBDC4, página 2 de 4 e detalhes resumidos. Central registrou avisos reais rotulados, alteração para quedas de 7%, exemplo fictício e marcação de lidos. Permissão do navegador estava bloqueada, portanto entrega externa pelo sistema operacional não foi homologada.

@@ -6,7 +6,7 @@ Painel independente em HTML, CSS e JavaScript modular: tema escuro, identidade r
 
 Node.js 22 ou superior. `npm start` abre o servidor em http://localhost:3000; `npm test` executa a suíte. A fonte padrão é **brapi.dev com dados reais**. Para desenvolvimento offline, defina explicitamente `DATA_PROVIDER=demo`; a interface identifica os exemplos fictícios.
 
-Sem chave, o catálogo consulta PETR4, VALE3, ITUB4 e MGLU3. Para os FIIs MXRF11, HGLG11, XPML11 e KNCR11, configure `BRAPI_TOKEN` apenas no servidor e confirme cobertura e limites do plano. Não envie a chave ao navegador ou ao Git. Na versão Node, copie `.env.example` para `.env`. Na hospedagem, configure a variável secreta `BRAPI_TOKEN` no ambiente de produção e publique uma nova versão.
+Sem chave, a lista de mercado carrega até 50 ações por volume informado, mais consultas detalhadas de PETR4, VALE3, ITUB4 e MGLU3. Para os FIIs MXRF11, HGLG11, XPML11 e KNCR11, configure `BRAPI_TOKEN` apenas no servidor e confirme cobertura e limites do plano. Não envie a chave ao navegador ou ao Git. Na versão Node, copie `.env.example` para `.env`. Na hospedagem, configure a variável secreta `BRAPI_TOKEN` no ambiente de produção e publique uma nova versão.
 
 ## Dados e comportamento
 
@@ -20,7 +20,7 @@ Sem chave, o catálogo consulta PETR4, VALE3, ITUB4 e MGLU3. Para os FIIs MXRF11
 
 ## Limites
 
-Catálogo manual de oito ativos, quatro disponíveis sem chave; não é toda a B3. DY e P/VP não são fornecidos por este adaptador. API v1 isolada em `server/provider.js`; migração v2 permanece no backlog antes de ampliar cobertura. Sem carteira contábil, autenticação própria, CVM ou integração direta B3.
+Cobertura resumida de até 50 ações por volume, combinada com o catálogo detalhado inicial; não é toda a B3. DY e P/VP não são fornecidos por este adaptador. API v1 isolada em `server/provider.js`; migração v2 permanece no backlog antes de ampliar cobertura. Sem carteira contábil, autenticação própria, CVM ou integração direta B3.
 
 Consulte `docs/API.md` e `docs/AUDITORIA.md`. Antes de ampliar a audiência, validar direitos de redistribuição, cotas do plano, limitação de tráfego e observabilidade. Cache por isolate não é limite global de uso da API.
 
@@ -43,3 +43,13 @@ A curva usa interpolação cúbica monotônica, preservando os fechamentos e sem
 `GET /api/context` acrescenta três integrações oficiais independentes: Banco Central (meta Selic SGS 432, % a.a.), IBGE/SIDRA (IPCA mensal nacional, tabela 1737/variável 63, % no mês) e CVM (cadastro dos quatro emissores). A associação ticker/emissor é curada e o cadastro é cruzado por código CVM + CNPJ. Balanços, indicadores contábeis e preço B3 direto ainda não estão integrados. Essas fontes não validam automaticamente a cotação brapi.
 
 Cada fonte mostra unidade, período de referência quando aplicável, origem, coleta e falha/stale. Cache independente de 6 h por processo/isolate; falha preserva snapshot anterior e pausa consultas dessa fonte por 15 min. Janela do IPCA é mensal; não deve ser apresentada como dado em tempo real. CVM retorna apenas campos cadastrais do emissor, sem contatos pessoais.
+
+## Cobertura ampliada e notificações (v4)
+
+O endpoint público /api/quote/list fornece até 50 ações por volume informado, com preço de fechamento, variação e setor. A resposta da lista não informa horário de cotação; asOf permanece null. Na junção, a cotação detalhada prevalece. Histórico/P/L/proventos não são preenchidos com estimativas. Tabela com 15 resultados por página, busca por código/nome e filtro de setor.
+
+Central de notificações no sino: padrão de 5%, configurável de 0,5% a 30%, altas/quedas/ambas, todas as ações carregadas ou favoritas presentes na cobertura. O limite compara a variação informada pela API com o percentual escolhido; não compara com o momento de abertura do site. A primeira observação acima do limite também gera aviso.
+
+Avisos internos ativos por padrão, histórico de até 50 itens no navegador e marcação de lidos. Sem repetição por ação/direção/limite/dia de verificação; Web Locks evita concorrência entre abas quando disponível. Demonstração, resposta stale, coleta anterior a 2 min e cotações com horário conhecido anterior a 24 h não geram alertas. Cotações sem horário são aceitas com advertência explícita; o aviso não confirma oscilação em tempo real. O botão Testar aviso cria exemplo fictício rotulado.
+
+Avisos externos são opcionais via Notification API, só após clique e permissão. Não há service worker, push remoto ou monitoramento com site fechado. Polling ocorre a cada minuto com a aba visível. Dispositivos sem suporte continuam com central interna. Preferências/histórico são locais, sem sincronização entre dispositivos.

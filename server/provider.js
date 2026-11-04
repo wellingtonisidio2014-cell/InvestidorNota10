@@ -1,3 +1,4 @@
+import {normalizeMarketList} from './market-list.js';
 import {catalog,demo} from './catalog.js';
 import {normalizeQuote} from '../public/js/domain.js';
 export function createProvider({mode='brapi',token='',fetcher=fetch,now=()=>Date.now()}={}) {
@@ -17,9 +18,19 @@ export function createProvider({mode='brapi',token='',fetcher=fetch,now=()=>Date
    results.push({status:"fulfilled",value:normalizeQuote(body.results[0],asset)});
    } catch(error) { results.push({status:"rejected",reason:error}); }
   }
-  const assets=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  const detailed=results.filter(r=>r.status==='fulfilled').map(r=>({...r.value,coverage:'detailed',quoteSource:'brapi.dev · cotação detalhada'}));
+  let listed=[],marketListUnavailable=false;
+  try {
+   const response=await fetcher('https://brapi.dev/api/quote/list?type=stock&sortBy=volume&sortOrder=desc&limit=50&page=1',{headers:token?{Authorization:`Bearer ${token}`}:{},signal:AbortSignal.timeout(10000)});
+   if(!response.ok)throw new Error('Lista indisponível');
+   listed=normalizeMarketList(await response.json());
+  } catch {marketListUnavailable=true;}
+  // Detailed quotes take precedence; never invent a source timestamp for list rows.
+  const merged=new Map(listed.map(asset=>[asset.ticker,asset]));
+  for(const asset of detailed)merged.set(asset.ticker,{...merged.get(asset.ticker),...asset});
+  const assets=[...merged.values()];
   if(!assets.length) { console.warn('Cotações indisponíveis', results.map(r=>r.reason?.name || 'UnknownError')); throw new Error('Não foi possível consultar a fonte de cotações.'); }
-  return {mode,source:'brapi.dev',fetchedAt:new Date(now()).toISOString(),assets,partial:assets.length!==available.length,failedTickers:available.filter((_,i)=>results[i].status==='rejected').map(a=>a.ticker),restrictedTickers:catalog.filter(a=>!available.includes(a)).map(a=>a.ticker)};
+  return {mode,source:'brapi.dev',fetchedAt:new Date(now()).toISOString(),assets,marketListUnavailable,marketListCount:listed.length,partial:marketListUnavailable||detailed.length!==available.length,failedTickers:available.filter((_,i)=>results[i].status==='rejected').map(a=>a.ticker),restrictedTickers:catalog.filter(a=>!available.includes(a)).map(a=>a.ticker)};
  }
  return async()=>{
   if(cache&&now()<expires)return {...cache,stale:failed};

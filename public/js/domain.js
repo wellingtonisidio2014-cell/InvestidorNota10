@@ -1,7 +1,7 @@
 export const numberOrNull = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
-export function selectAssets(assets, {query='',type='all',favoritesOnly=false,favorites=[],sort='ticker'}={}) {
+export function selectAssets(assets, {query='',type='all',favoritesOnly=false,favorites=[],sort='ticker',sector='all'}={}) {
  const term=query.trim().toLocaleLowerCase('pt-BR');
- return assets.filter(a => `${a.ticker} ${a.name}`.toLocaleLowerCase('pt-BR').includes(term) && (type==='all'||a.type===type) && (!favoritesOnly||favorites.includes(a.id))).sort((a,b)=>sort==='ticker'?a.ticker.localeCompare(b.ticker):a[sort]===null?(b[sort]===null?0:1):b[sort]===null?-1:b[sort]-a[sort]);
+ return assets.filter(a => `${a.ticker} ${a.name}`.toLocaleLowerCase('pt-BR').includes(term) && (type==='all'||a.type===type) && (sector==='all'||a.sector===sector) && (!favoritesOnly||favorites.includes(a.id))).sort((a,b)=>sort==='ticker'?a.ticker.localeCompare(b.ticker):a[sort]===null?(b[sort]===null?0:1):b[sort]===null?-1:b[sort]-a[sort]);
 }
 export function normalizeQuote(raw,asset) {
  if(raw.symbol!==asset.ticker||raw.currency!=='BRL') throw new Error('Ativo ou moeda incompatível');

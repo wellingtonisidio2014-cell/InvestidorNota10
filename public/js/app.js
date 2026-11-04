@@ -1,3 +1,4 @@
+import {initAlerts, processAlerts} from './alerts.js';
 import {loadSources, renderIssuer} from './sources.js';
 import {initMotion, reveal} from './motion.js';
 import {initInteractions, toast} from './interactions.js';
@@ -5,7 +6,7 @@ import {renderHistory} from './chart.js';
 import {assetsToCSV} from './export.js';
 import { selectAssets, money, decimal, upcomingDividends } from './domain.js';
 const $ = id => document.getElementById(id);
-const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', chartCount: 0, data: null };
+const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', chartCount: 0, page: 1, sector:'all', data: null };
 try {
   const saved = JSON.parse(localStorage.getItem('in10-favorites') || '[]');
   if (Array.isArray(saved)) state.favorites = saved.filter(id => typeof id === 'string');
@@ -31,16 +32,18 @@ function toggleFavorite(id, notify = true) {
   state.favorites = state.favorites.includes(id) ? state.favorites.filter(item => item !== id) : [...state.favorites, id];
   try { localStorage.setItem('in10-favorites', JSON.stringify(state.favorites)); } catch { $('notice').textContent = 'Favoritos mantidos apenas nesta sessão: armazenamento indisponível.'; }
   renderTable(); renderWatchlist(); renderSummary();
+  if(state.data)processAlerts(state.data,state.favorites);
   if (notify) toast(wasFavorite ? 'Ativo removido dos favoritos.' : 'Ativo adicionado ao seu radar.', () => toggleFavorite(id, false));
 }
 function showDetails(asset) {
   $('detail-content').replaceChildren(
     element('p', asset.sector, 'muted'), element('h2', `${asset.ticker} · ${asset.name}`),
     element('h2', money(asset.price)), element('p', `Variação: ${percent(asset.change)} · P/L: ${decimal(asset.pe)}`),
-    element('p', `Fonte: ${state.data.source}. Horário da cotação: ${timestamp(asset.asOf)} (Brasília).`),
+    element('p', `Fonte: ${asset.quoteSource||state.data.source}. Horário da cotação: ${timestamp(asset.asOf)} (Brasília).`),
     element('p', `Última consulta bem-sucedida: ${timestamp(state.data.fetchedAt)}.`),
     element('p', 'Atualização da tela a cada 60 segundos. A cotação pode estar atrasada; o horário da fonte prevalece. DY e P/VP não são fornecidos nesta integração inicial.')
   );
+  if(asset.coverage==='summary')$('detail-content').append(element('p','Cotação resumida: horário de origem, histórico, P/L e proventos não fornecidos nesta consulta. A data de coleta não substitui o horário da cotação.','coverage'));
   const issuer=element('section',undefined,'issuer-data'); issuer.dataset.issuer=asset.ticker; renderIssuer(issuer,asset.ticker); $('detail-content').append(issuer);
   $('details').showModal(); reveal($('details')); 
 }
@@ -49,14 +52,18 @@ function renderTable() {
   $('rows').replaceChildren();
   $('count').textContent = `${assets.length} ${assets.length === 1 ? 'ativo encontrado' : 'ativos encontrados'}${state.favoritesOnly ? ' · favoritos' : ''}`;
   $('favorites').setAttribute('aria-pressed', String(state.favoritesOnly));
-  for (const asset of assets) {
+  const pages=Math.max(1,Math.ceil(assets.length/15)); state.page=Math.min(state.page,pages);
+  $('page-status').textContent=`Página ${state.page} de ${pages} · ${assets.length} ativos`;
+  $('page-prev').disabled=state.page===1; $('page-next').disabled=state.page===pages;
+  for (const asset of assets.slice((state.page-1)*15,state.page*15)) {
     const row = element('tr');
     const identity = element('td');
     const button = element('button', asset.ticker, 'ticker');
     button.onclick = () => showDetails(asset);
-    identity.append(button, element('small', asset.name));
+    identity.append(button, element('small', asset.name)); identity.querySelector('small').title=asset.name;
+    if(asset.coverage==='summary')identity.append(element('small','Cotação resumida','coverage-chip'));
     row.append(identity, element('td', money(asset.price)), element('td', percent(asset.change), tone(asset.change)), element('td', decimal(asset.pe)));
-    row.append(element('td', timestamp(asset.asOf)));
+    row.append(element('td', asset.asOf?timestamp(asset.asOf):'Não informado'));
     const star = element('button', state.favorites.includes(asset.id) ? '★' : '☆', 'star');
     star.setAttribute('aria-label', `Favoritar ${asset.ticker}`);
     star.setAttribute('aria-pressed', String(state.favorites.includes(asset.id)));
@@ -133,8 +140,9 @@ function renderSummary() {
 }
 function renderChart() {
   const select = $('chart-asset'); select.replaceChildren();
-  for (const asset of state.assets) { const option = element('option', asset.ticker); option.value = asset.id; select.append(option); }
-  if (!state.assets.some(a => a.id === state.chartId)) state.chartId = state.assets[0]?.id || '';
+  const chartAssets=state.assets.filter(a=>a.history?.length>1);
+  for (const asset of chartAssets) { const option = element('option', asset.ticker); option.value = asset.id; select.append(option); }
+  if (!chartAssets.some(a => a.id === state.chartId)) state.chartId = chartAssets[0]?.id || '';
   select.value = state.chartId;
   const asset = state.assets.find(a=>a.id===state.chartId);
   $('chart-price').textContent = money(asset?.price);
@@ -152,21 +160,25 @@ async function load() {
     const data = await response.json();
     if (!Array.isArray(data.assets)) throw new Error('Resposta inválida');
     state.data = data; state.assets = data.assets;
+    const sectors=[...new Set(data.assets.map(a=>a.sector))].sort();
+    $('sector').replaceChildren();
+    for(const value of ['all',...sectors]){const option=element('option',value==='all'?'Todos os setores':value);option.value=value;$('sector').append(option);}
+    if(!sectors.includes(state.sector))state.sector='all';$('sector').value=state.sector;
     $('connection').textContent = data.stale ? 'Dados preservados · fonte indisponível' : data.mode === 'demo' ? 'Demonstração · dados fictícios' : 'Fonte conectada · brapi.dev';
-    const restricted = data.restrictedTickers?.length ? 'Cobertura sem chave: PETR4, VALE3, ITUB4 e MGLU3. FIIs exigem configuração. ' : '';
-    $('notice').textContent = `${data.mode === 'demo' ? 'VALORES FICTÍCIOS. ' : ''}${restricted}${data.stale ? 'Falha na fonte: últimos dados preservados. ' : ''}${data.partial ? `Consulta parcial: ${data.failedTickers.join(', ')} indisponíveis. ` : ''}Consulta: ${timestamp(data.fetchedAt)}. Atraso conforme fornecedor; confira o horário de cada cotação.`;
-    renderTable(); renderWatchlist(); renderComparison(); renderDividends(); renderChart(); renderSummary();
+    const restricted = `${data.marketListCount||0} ações na lista por volume; ${data.assets.filter(a=>a.coverage==='detailed').length} ativos com consulta detalhada. A lista resumida não informa horário da cotação. ${data.restrictedTickers?.length?'FIIs exigem configuração. ':''}${data.marketListUnavailable?'Lista ampliada indisponível nesta consulta. ':''}`;
+    $('notice').textContent = `${data.mode === 'demo' ? 'VALORES FICTÍCIOS. ' : ''}${restricted}${data.stale ? 'Falha na fonte: últimos dados preservados. ' : ''}${data.failedTickers?.length ? `Detalhes indisponíveis: ${data.failedTickers.join(', ')}. ` : ''}Consulta: ${timestamp(data.fetchedAt)}. Atraso conforme fornecedor; confira o horário de cada cotação.`;
+    renderTable(); renderWatchlist(); renderComparison(); renderDividends(); renderChart(); renderSummary(); processAlerts(data,state.favorites);
   } catch {
     $('connection').textContent = 'Atualização indisponível';
     $('notice').textContent = `Não foi possível atualizar. ${state.assets.length ? 'Últimos dados preservados; podem estar desatualizados.' : 'Nenhum dado foi substituído por exemplos.'} Tente novamente em instantes.`;
     if (!state.assets.length) { $('dividend-list').replaceChildren(element('p','Fonte indisponível. Tente atualizar.','empty')); renderTable(); renderWatchlist(); renderComparison(); }
   } finally { loading = false; $('refresh').disabled = false; $('refresh').textContent = '↻ Atualizar'; $('explorar').setAttribute('aria-busy','false'); }
 }
-$('search').addEventListener('input', e => { state.query = e.target.value; renderTable(); });
-$('type').onchange = e => { state.type = e.target.value; renderTable(); };
-$('sort').onchange = e => { state.sort = e.target.value; renderTable(); };
+$('search').addEventListener('input', e => { state.query = e.target.value; state.page=1; renderTable(); });
+$('type').onchange = e => { state.type = e.target.value; state.page=1; renderTable(); };
+$('sort').onchange = e => { state.sort = e.target.value; state.page=1; renderTable(); };
 $('chart-asset').onchange = e => { state.chartId = e.target.value; renderChart(); };
-$('favorites').onclick = () => { state.favoritesOnly = !state.favoritesOnly; renderTable(); $('explorar').scrollIntoView(); };
+$('favorites').onclick = () => { state.favoritesOnly = !state.favoritesOnly; state.page=1; renderTable(); $('explorar').scrollIntoView(); };
 function clearComparison() { state.selected = []; renderTable(); renderComparison(); }
 $('clear').addEventListener('click',clearComparison);
 $('tray-clear').addEventListener('click',clearComparison);
@@ -187,5 +199,9 @@ $('export-csv').addEventListener('click', () => {
   const link = element('a'); link.href=url; link.download=`radar-n10-${todayInBrazil()}.csv`; link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000); toast(`${assets.length} ${assets.length === 1 ? "ativo exportado" : "ativos exportados"} com origem e horário.`);
 });
+$('sector').addEventListener('change',event=>{state.sector=event.target.value;state.page=1;renderTable();});
+$('page-prev').addEventListener('click',()=>{state.page=Math.max(1,state.page-1);renderTable();});
+$('page-next').addEventListener('click',()=>{state.page++;renderTable();});
+initAlerts(id=>{const asset=state.assets.find(a=>a.id===id);if(asset)showDetails(asset);else toast('Ativo fora da cobertura carregada neste momento.');});
 initMotion(); initInteractions(); load(); loadSources();
 setInterval(()=>{if(!document.hidden)loadSources();},3600000);

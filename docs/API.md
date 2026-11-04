@@ -37,3 +37,9 @@ Referências verificadas em 04/11/2026:
 - CVM: https://dados.cvm.gov.br/dataset/cia_aberta-cad ; arquivo https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv
 
 BCB e CVM identificam licença ODbL no catálogo; origem e links são preservados na UI. Não há scraping do concorrente. O contexto oficial é complementar, não triangulação de preços.
+
+## Expansão da lista de mercado
+
+/api/assets consulta em sequência os ativos detalhados e `/api/quote/list?type=stock&sortBy=volume&sortOrder=desc&limit=50&page=1`. Cada ativo inclui coverage (summary/detailed) e quoteSource. Resumidos incluem volume quando disponível, asOf=null, pe/pb/dy=null e listas de histórico/proventos vazias. marketListCount é a contagem válida retornada; marketListUnavailable indica falha específica. partial inclui falhas da lista ou dos detalhes. A quantidade após junção pode superar 50 se um ativo do catálogo detalhado estiver fora da lista por volume.
+
+A lista é validada por tipo, código e números finitos; timestamps não são derivados do horário da requisição. Referência consultada em 04/11/2026: https://brapi.dev/docs/acoes/list (endpoint sem token, preço de fechamento e variação). Resumo de mercado não garante tempo real.
