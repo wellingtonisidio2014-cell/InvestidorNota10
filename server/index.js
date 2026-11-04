@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {createOfficialProvider} from './official-sources.js';
 import {createProvider} from './provider.js';
 const files=new Map([['/',['index.html','text/html']],['/favicon.svg',['favicon.svg','image/svg+xml']],['/styles.css',['styles.css','text/css']],['/js/app.js',['js/app.js','text/javascript']],['/js/domain.js',['js/domain.js','text/javascript']]]);
-for (const name of ['motion','interactions','chart','export','curve','sources','alerts','alert-rules']) files.set(`/js/${name}.js`, [`js/${name}.js`, 'text/javascript']);
+for (const name of ['motion','interactions','chart','export','curve','sources','alerts','alert-rules','chart-expanded','history-data']) files.set(`/js/${name}.js`, [`js/${name}.js`, 'text/javascript']);
 for (const name of ['radar-orbit','icons']) files.set(`/art/${name}.svg`, [`art/${name}.svg`, 'image/svg+xml']);
 files.set('/vendor/gsap-3.15.1.min.js',['vendor/gsap-3.15.1.min.js','text/javascript']);
 export function makeServer(provider=createProvider({mode:process.env.DATA_PROVIDER||'brapi',token:process.env.BRAPI_TOKEN||''})) {
@@ -12,7 +12,7 @@ export function makeServer(provider=createProvider({mode:process.env.DATA_PROVID
  return createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://brapi.dev; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
   if(req.method!=='GET'){res.writeHead(405,{'Allow':'GET'});res.end();return;}
   const path=new URL(req.url,'http://localhost').pathname;
   try {

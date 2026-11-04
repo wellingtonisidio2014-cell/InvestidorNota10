@@ -65,3 +65,11 @@ A CVM não autoriza CORS: o build baixa o cadastro e publica apenas os campos do
 Favoritos, preferências e histórico de alertas são locais a cada domínio, portanto não migram automaticamente do endereço anterior. Alertas só são avaliados enquanto a página está aberta e visível; avisos do sistema dependem da permissão do navegador.
 
 O backend Node e a hospedagem anterior permanecem compatíveis. O build estático não inclui `.env`, arquivos de servidor HTTP, tokens ou credenciais.
+
+## Gráfico ampliado (v5)
+
+O botão Expandir abre um diálogo que ocupa toda a área da página; Fechar/Esc devolvem o foco ao botão original. Inclui seletor dos ativos com histórico carregado, cursor acessível, oito períodos (1 D, 5 D, 1 M, 3 M, 6 M, ano corrente, 1 A e 5 A) e atualização visível a cada minuto. A visão diária consulta intervalos de 15 minutos; cinco anos usa semanas; os demais usam dias. A fonte pode restringir períodos/tickers: falhas ficam explícitas, sem reutilizar silenciosamente outro período.
+
+A variação do período compara primeiro e último fechamento retornado, sem proventos, e aparece separada da variação diária da cotação. Abertura, máxima/mínima diária, fechamento anterior, volume, valor de mercado, P/L, lucro por ação e faixa de 52 semanas são campos da resposta; ausências permanecem “—”. Cadastro CVM aparece abaixo, com sua própria data de coleta.
+
+A integração reaproveita o endpoint v1 já utilizado pelo projeto. Consultas do gráfico são diretas à brapi, sem token de usuário; cache de 60 segundos por ativo/período, deduplicação de solicitações simultâneas, validação de ticker/moeda/período/intervalo e descarte de respostas antigas após troca rápida. Nenhuma carteira pessoal foi adicionada nesta versão.

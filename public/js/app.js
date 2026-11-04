@@ -1,3 +1,4 @@
+import {initExpandedChart} from './chart-expanded.js';
 import {initAlerts, processAlerts} from './alerts.js';
 import {loadSources, renderIssuer} from './sources.js';
 import {initMotion, reveal} from './motion.js';
@@ -145,6 +146,7 @@ function renderChart() {
   if (!chartAssets.some(a => a.id === state.chartId)) state.chartId = chartAssets[0]?.id || '';
   select.value = state.chartId;
   const asset = state.assets.find(a=>a.id===state.chartId);
+  $('chart-expand').disabled=!asset;
   $('chart-price').textContent = money(asset?.price);
   $('chart-change').textContent = percent(asset?.change);
   $('chart-change').className = `change ${tone(asset?.change)}`;
@@ -203,5 +205,6 @@ $('sector').addEventListener('change',event=>{state.sector=event.target.value;st
 $('page-prev').addEventListener('click',()=>{state.page=Math.max(1,state.page-1);renderTable();});
 $('page-next').addEventListener('click',()=>{state.page++;renderTable();});
 initAlerts(id=>{const asset=state.assets.find(a=>a.id===id);if(asset)showDetails(asset);else toast('Ativo fora da cobertura carregada neste momento.');});
+initExpandedChart(()=>state.assets,()=>state.chartId);
 initMotion(); initInteractions(); load(); loadSources();
 setInterval(()=>{if(!document.hidden)loadSources();},3600000);
