@@ -1,19 +1,24 @@
-# Contrato inicial da API
+# Contrato da API
 
-`GET /api/assets` → 200 JSON; 503 se nenhuma consulta válida existir. Métodos diferentes de GET retornam 405.
+`GET /api/assets`: 200 JSON; 503 sem snapshot válido. No servidor Node, outros métodos retornam 405.
 
 | Campo | Semântica |
 |---|---|
-| mode | demo ou brapi |
-| source | Origem explicitada |
+| mode | brapi (padrão) ou demo explícito |
+| source | Fornecedor |
 | fetchedAt | Última coleta bem-sucedida ISO UTC; não é horário da cotação |
-| stale | Falha ao atualizar; resposta preservada do cache |
-| partial | Parte dos ativos consultados falhou |
+| stale | Falha ao atualizar; snapshot anterior preservado |
+| partial | Parte do conjunto consultado falhou |
 | failedTickers | Códigos consultados sem resposta válida |
-| assets | Lista normalizada |
+| restrictedTickers | Catálogo excluído da consulta por ausência de chave |
+| assets | Ativos normalizados |
 
-Cada ativo contém id estável interno, ticker, name, type (stock/fii), sector, price (BRL), change (percentual informado pelo fornecedor), pe, dy (%), pb e asOf (horário da fonte ISO UTC). Ausentes são null, nunca zero presumido. No modo demo asOf é null. price e indicadores são números para exibição; este MVP não implementa contabilidade monetária.
+Ativo: id, ticker, name, type (stock/fii), sector, price em BRL, change percentual do fornecedor, pe, dy, pb e asOf ISO UTC. Valores ausentes são null. DY e P/VP não são fornecidos nesta integração.
 
-O catálogo é intencionalmente limitado. partial sinaliza falha dentro do conjunto consultado, não cobertura de todo o mercado. Sem token, apenas quatro ações entram na consulta. Cache de 60 segundos reduz chamadas, mas sua política deve ser ajustada ao contrato do fornecedor. Sem endpoints públicos de configuração ou gravação de tokens.
+`history`: lista ordenada de `{date, close}`; date em milissegundos UTC, close numérico positivo do histórico diário de um mês. Não é retorno total. A API é responsável pelos ajustes da série; o aplicativo não recalcula ajustes de eventos corporativos.
 
-Futuro: paginação do catálogo, endpoints independentes para históricos, dividendos, demonstrações CVM, versão de fórmulas, unidades, moedas e licença por série. Dados contábeis requerem precisão decimal, revisões e períodos explícitos.
+`dividends`: `{type, amount, paymentDate, recordDate, deadline}`. amount em BRL por unidade, datas YYYY-MM-DD. recordDate deriva de lastDatePrior (data-com). deadline identifica paymentDateIsDeadline. A interface filtra pagamentos a partir da data corrente de Brasília, deduplica eventos idênticos e mostra os cinco próximos. Não infere direito ao pagamento, valores líquidos, cancelamentos ou cobertura completa.
+
+Consultas sequenciais a `/api/quote/{ticker}?range=1mo&interval=1d&dividends=true`, timeout de 10 s por ativo. Quatro consultas sem chave; oito com chave. A interface aguarda até 90 s. Cache de 60 s por processo/isolate, pausa de 15 s após falha quando há cache, promise compartilhada. Não há cache distribuído nem limite global de tráfego.
+
+Referência consultada em 04/11/2026: https://brapi.dev/docs/acoes. O contrato/licença e os limites do plano devem ser verificados antes de ampliar o serviço. Atualização a cada minuto não garante cotação em tempo real.

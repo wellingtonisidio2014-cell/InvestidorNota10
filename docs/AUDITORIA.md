@@ -67,3 +67,11 @@ Fontes candidatas: CVM DFP https://dados.cvm.gov.br/dataset/cia_aberta-doc-dfp ;
 5. Carteira persistente, autenticação e autorização por proprietário; observabilidade e operação.
 
 Identidade e recursos visuais foram escritos para este projeto. Nenhum HTML, CSS, JavaScript, texto editorial ou imagem do concorrente foi copiado. Não foram acessadas áreas privadas ou burlados controles. Fontes acima são páginas web sem paginação; são identificadas por URL/seção, sem páginas inventadas.
+
+## Atualização Radar Noturno — 04/11/2026
+
+Layout refeito conforme proposta visual escolhida pelo usuário, com estrutura responsiva, cores roxa/verde e sidebar própria. Padrão alterado de demo para brapi. Histórico de um mês e proventos conectados; agenda distingue passado/futuro, data-com e pagamento. Teste externo retornou os quatro ativos gratuitos com 20 pontos históricos cada; horário fornecido: 2026-11-04T00:04:30Z, portanto não foi comprovado feed em tempo real. Respostas 429 de concorrência motivaram consultas sequenciais e teste específico.
+
+Treze testes automatizados passaram: filtros, normalização, histórico, deduplicação de proventos, cache, stale, resposta parcial, concorrência e rotas HTTP. Validação inicial no navegador confirmou layout e tratamento de indisponibilidade; o preview não obteve dados externos, embora o adaptador Node tenha recebido os quatro ativos. Homologação da API no ambiente publicado permanece necessária. As pendências históricas acima devem ser lidas à luz desta atualização.
+
+Homologação publicada concluída em 04/11/2026: GET /api/assets retornou HTTP 200, mode=brapi, partial=false e stale=false, com PETR4, VALE3, ITUB4 e MGLU3; cada ativo trouxe 20 fechamentos históricos. Acesso de serviço autenticado manteve a audiência privada. O navegador de QA não tinha sessão ChatGPT para abrir a página publicada; fluxos interativos com dados reais nesse navegador permanecem sem homologação.

@@ -6,3 +6,7 @@ test('combina busca, classe e favoritos sem alterar entrada',()=>{assert.deepEqu
 test('ausentes ficam no final na ordenação numérica',()=>assert.equal(selectAssets(assets,{sort:'dy'})[1].id,'a'));
 test('não transforma ausência ou texto em zero',()=>{for(const v of [null,undefined,'',NaN,Infinity,'3.5'])assert.equal(numberOrNull(v),null);assert.equal(numberOrNull(0),0)});
 test('rejeita instrumento/moeda incorretos e preserva ausência',()=>{assert.throws(()=>normalizeQuote({symbol:'OUTRO',currency:'BRL'},assets[0]));assert.throws(()=>normalizeQuote({symbol:'ABCD3',currency:'USD'},assets[0]));const a=normalizeQuote({symbol:'ABCD3',currency:'BRL',regularMarketPrice:10,regularMarketTime:'inválido'},assets[0]);assert.equal(a.price,10);assert.equal(a.asOf,null);assert.equal(a.dy,null)});
+
+import {upcomingDividends} from '../public/js/domain.js';
+test('normaliza histórico, descarta entradas inválidas e ordena',()=>{const a=normalizeQuote({symbol:'ABCD3',currency:'BRL',historicalDataPrice:[{date:200,close:20},{date:100,close:10},{date:300,close:null}]},assets[0]);assert.deepEqual(a.history,[{date:100000,close:10},{date:200000,close:20}])});
+test('agenda separa futuro de passado e remove eventos idênticos',()=>{const d={type:'JCP',amount:0.2,paymentDate:'2026-12-01',recordDate:'2026-10-01'};const list=upcomingDividends([{id:'a',ticker:'ABCD3',dividends:[d,d,{...d,paymentDate:'2025-12-01'}]}],'2026-11-04');assert.equal(list.length,1);assert.equal(list[0].recordDate,'2026-10-01')});
