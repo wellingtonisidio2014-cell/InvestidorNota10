@@ -27,3 +27,11 @@ Consulte `docs/API.md` e `docs/AUDITORIA.md`. Antes de ampliar a audiência, val
 ## Hospedagem
 
 A cópia publicada usa Vinext/Cloudflare Workers para servir o mesmo HTML e `GET /api/assets`. O backend Node original permanece disponível em `server/index.js`; GitHub Pages sozinho não o executa. `hosting/route.ts` no repositório documenta o adaptador de hospedagem.
+
+## Experiência interativa (v2)
+
+GSAP 3.15.1 é servido localmente, com aviso original de licença em public/vendor/. Animações de entrada e traçado do gráfico respeitam prefers-reduced-motion e o botão para desligar animações. Sem GSAP, os controles continuam funcionando.
+
+Novidades: ilustração SVG original, ícones vetoriais, resumo apenas da cobertura carregada, períodos de 5/10 pregões ou mês disponível, cursor no gráfico e controle acessível por teclado, desfazer favorito, barra de comparação, remoção individual, densidade de tabela, CSV filtrado com fonte/horários e proteção contra fórmulas em campos textuais. Atalhos / (busca), ? (ajuda) e Esc (fechar diálogo).
+
+Módulos: chart.js (gráfico), motion.js (GSAP e preferências), interactions.js (atalhos e feedback), export.js (CSV). Não há imagens externas nem scripts de CDN em tempo de execução.

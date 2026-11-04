@@ -1,6 +1,10 @@
+import {initMotion, reveal} from './motion.js';
+import {initInteractions, toast} from './interactions.js';
+import {renderHistory} from './chart.js';
+import {assetsToCSV} from './export.js';
 import { selectAssets, money, decimal, upcomingDividends } from './domain.js';
 const $ = id => document.getElementById(id);
-const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', data: null };
+const state = { assets: [], favorites: [], selected: [], query: '', type: 'all', sort: 'ticker', favoritesOnly: false, chartId: '', chartCount: 0, data: null };
 try {
   const saved = JSON.parse(localStorage.getItem('in10-favorites') || '[]');
   if (Array.isArray(saved)) state.favorites = saved.filter(id => typeof id === 'string');
@@ -21,10 +25,12 @@ function todayInBrazil() {
   const value = type => parts.find(p => p.type === type).value;
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
-function toggleFavorite(id) {
+function toggleFavorite(id, notify = true) {
+  const wasFavorite = state.favorites.includes(id);
   state.favorites = state.favorites.includes(id) ? state.favorites.filter(item => item !== id) : [...state.favorites, id];
   try { localStorage.setItem('in10-favorites', JSON.stringify(state.favorites)); } catch { $('notice').textContent = 'Favoritos mantidos apenas nesta sessão: armazenamento indisponível.'; }
-  renderTable(); renderWatchlist();
+  renderTable(); renderWatchlist(); renderSummary();
+  if (notify) toast(wasFavorite ? 'Ativo removido dos favoritos.' : 'Ativo adicionado ao seu radar.', () => toggleFavorite(id, false));
 }
 function showDetails(asset) {
   $('detail-content').replaceChildren(
@@ -34,7 +40,7 @@ function showDetails(asset) {
     element('p', `Última consulta bem-sucedida: ${timestamp(state.data.fetchedAt)}.`),
     element('p', 'Atualização da tela a cada 60 segundos. A cotação pode estar atrasada; o horário da fonte prevalece. DY e P/VP não são fornecidos nesta integração inicial.')
   );
-  $('details').showModal();
+  $('details').showModal(); reveal($('details')); 
 }
 function renderTable() {
   const assets = selectAssets(state.assets, state);
@@ -81,6 +87,8 @@ function renderWatchlist() {
   if (!assets.length) container.append(element('p', 'Marque a estrela ao lado de um ativo para acompanhar aqui.', 'empty'));
 }
 function renderComparison() {
+  $('compare-tray').hidden = state.selected.length === 0;
+  $('compare-total').textContent = `${state.selected.length} de 5 ativos selecionados`;
   const container = $('comparison'); container.replaceChildren();
   for (const id of state.selected) {
     const asset = state.assets.find(a => a.id === id); if (!asset) continue;
@@ -88,7 +96,10 @@ function renderComparison() {
     for (const [label, value] of [['Cotação', money(asset.price)], ['Variação', percent(asset.change)], ['P/L', decimal(asset.pe)], ['P/VP', decimal(asset.pb)]]) {
       const row = element('p'); row.append(element('span', label), element('strong', value)); card.append(row);
     }
-    card.append(element('small', timestamp(asset.asOf), 'muted')); container.append(card);
+    card.append(element('small', timestamp(asset.asOf), 'muted'));
+    const remove = element('button', 'Remover', 'remove-compare');
+    remove.addEventListener('click', () => { state.selected = state.selected.filter(value => value !== id); renderTable(); renderComparison(); });
+    card.append(remove); container.append(card);
   }
   if (!container.children.length) container.append(element('p', 'Sua comparação começa ao selecionar um ativo na tabela.', 'empty'));
 }
@@ -103,47 +114,36 @@ function renderDividends() {
         element('p', `Valor por unidade: ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:8}).format(event.amount)}`),
         element('p', `${event.deadline ? 'Data-limite de pagamento' : 'Pagamento informado'}: ${event.paymentDate.split('-').reverse().join('/')}`),
         element('p', `Data-com: ${event.recordDate ? event.recordDate.split('-').reverse().join('/') : 'Não informada'}`),
-        element('p', 'Fonte: brapi.dev. Confirme as condições no comunicado do emissor; esta lista não calcula seu direito ao recebimento.'));
-      $('details').showModal();
+        element('p', `Fonte: ${state.data.source}. Confirme as condições no comunicado do emissor; esta lista não calcula seu direito ao recebimento.`));
+      $('details').showModal(); reveal($('details')); 
     };
     row.append(button, element('span', `${money(event.amount)} · ${event.type}`), element('span', dateLabel(event.paymentDate), 'date-chip')); container.append(row);
   }
   if (!events.length) container.append(element('p', 'Nenhum pagamento futuro informado para a cobertura disponível. Isso não significa ausência de proventos.', 'empty'));
 }
-function svgNode(tag, attributes, text) {
-  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  for (const [key,value] of Object.entries(attributes)) node.setAttribute(key, String(value));
-  if (text !== undefined) node.textContent = text;
-  return node;
+function renderSummary() {
+  $('summary-total').textContent = state.assets.length;
+  $('summary-breadth').textContent = `${state.assets.filter(a=>a.change>0).length} ↑ / ${state.assets.filter(a=>a.change<0).length} ↓`;
+  $('summary-favorites').textContent = state.favorites.length;
+  const next = upcomingDividends(state.assets,todayInBrazil())[0];
+  $('summary-dividend').textContent = next ? next.ticker : 'Sem evento';
+  $('summary-dividend-note').textContent = next ? `${dateLabel(next.paymentDate)} · ${money(next.amount)} por unidade` : 'Nenhum futuro informado pela fonte';
 }
 function renderChart() {
   const select = $('chart-asset'); select.replaceChildren();
   for (const asset of state.assets) { const option = element('option', asset.ticker); option.value = asset.id; select.append(option); }
   if (!state.assets.some(a => a.id === state.chartId)) state.chartId = state.assets[0]?.id || '';
   select.value = state.chartId;
-  const asset = state.assets.find(a => a.id === state.chartId);
-  const container = $('chart'); container.replaceChildren();
+  const asset = state.assets.find(a=>a.id===state.chartId);
   $('chart-price').textContent = money(asset?.price);
-  $('chart-change').textContent = percent(asset?.change); $('chart-change').className = `change ${tone(asset?.change)}`;
-  $('chart-source').textContent = asset ? `brapi.dev · cotação em ${timestamp(asset.asOf)} (Brasília)` : '';
-  const history = asset?.history || [];
-  if (history.length < 2) { container.append(element('p', 'Histórico não disponível para este ativo.', 'empty')); return; }
-  const low = Math.min(...history.map(p => p.close)), high = Math.max(...history.map(p => p.close));
-  const spread = high - low || 1, start = history[0].date, end = history.at(-1).date;
-  const x = date => 52 + (date-start)/(end-start || 1)*328;
-  const y = price => 130-(price-low)/spread*100;
-  const svg = svgNode('svg', { viewBox: '0 0 400 165', role:'img', 'aria-label':`Histórico de ${asset.ticker}: primeiro fechamento ${money(history[0].close)}, último ${money(history.at(-1).close)}.` });
-  for (let i=0; i<3; i++) {
-    const value=low+spread*i/2, yy=y(value);
-    svg.append(svgNode('line',{x1:52,x2:380,y1:yy,y2:yy,stroke:'#343044','stroke-dasharray':'3 4'}),svgNode('text',{x:0,y:yy+4},decimal(value)));
-  }
-  svg.append(svgNode('polyline',{points:history.map(p=>`${x(p.date)},${y(p.close)}`).join(' '),class:'line'}));
-  svg.append(svgNode('text',{x:52,y:157},new Date(start).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',timeZone:'America/Sao_Paulo'})),svgNode('text',{x:380,y:157,'text-anchor':'end'},new Date(end).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',timeZone:'America/Sao_Paulo'})));
-  container.append(svg);
+  $('chart-change').textContent = percent(asset?.change);
+  $('chart-change').className = `change ${tone(asset?.change)}`;
+  $('chart-source').textContent = asset ? `${state.data?.source || "Fonte"} · cotação em ${timestamp(asset.asOf)} (Brasília)` : '';
+  renderHistory($('chart'),asset,state.chartCount);
 }
 async function load() {
   if (loading) return;
-  loading = true; $('refresh').disabled = true;
+  loading = true; $('refresh').disabled = true; $('refresh').textContent = 'Consultando…'; $('explorar').setAttribute('aria-busy','true');
   try {
     const response = await fetch('/api/assets', {signal:AbortSignal.timeout(90000)});
     if (!response.ok) throw new Error('Fonte indisponível');
@@ -153,21 +153,36 @@ async function load() {
     $('connection').textContent = data.stale ? 'Dados preservados · fonte indisponível' : data.mode === 'demo' ? 'Demonstração · dados fictícios' : 'Fonte conectada · brapi.dev';
     const restricted = data.restrictedTickers?.length ? 'Cobertura sem chave: PETR4, VALE3, ITUB4 e MGLU3. FIIs exigem configuração. ' : '';
     $('notice').textContent = `${data.mode === 'demo' ? 'VALORES FICTÍCIOS. ' : ''}${restricted}${data.stale ? 'Falha na fonte: últimos dados preservados. ' : ''}${data.partial ? `Consulta parcial: ${data.failedTickers.join(', ')} indisponíveis. ` : ''}Consulta: ${timestamp(data.fetchedAt)}. Atraso conforme fornecedor; confira o horário de cada cotação.`;
-    renderTable(); renderWatchlist(); renderComparison(); renderDividends(); renderChart();
+    renderTable(); renderWatchlist(); renderComparison(); renderDividends(); renderChart(); renderSummary();
   } catch {
     $('connection').textContent = 'Atualização indisponível';
     $('notice').textContent = `Não foi possível atualizar. ${state.assets.length ? 'Últimos dados preservados; podem estar desatualizados.' : 'Nenhum dado foi substituído por exemplos.'} Tente novamente em instantes.`;
     if (!state.assets.length) { $('dividend-list').replaceChildren(element('p','Fonte indisponível. Tente atualizar.','empty')); renderTable(); renderWatchlist(); renderComparison(); }
-  } finally { loading = false; $('refresh').disabled = false; }
+  } finally { loading = false; $('refresh').disabled = false; $('refresh').textContent = '↻ Atualizar'; $('explorar').setAttribute('aria-busy','false'); }
 }
-$('search').oninput = e => { state.query = e.target.value; renderTable(); };
+$('search').addEventListener('input', e => { state.query = e.target.value; renderTable(); });
 $('type').onchange = e => { state.type = e.target.value; renderTable(); };
 $('sort').onchange = e => { state.sort = e.target.value; renderTable(); };
 $('chart-asset').onchange = e => { state.chartId = e.target.value; renderChart(); };
 $('favorites').onclick = () => { state.favoritesOnly = !state.favoritesOnly; renderTable(); $('explorar').scrollIntoView(); };
-$('clear').onclick = () => { state.selected = []; renderTable(); renderComparison(); };
+function clearComparison() { state.selected = []; renderTable(); renderComparison(); }
+$('clear').addEventListener('click',clearComparison);
+$('tray-clear').addEventListener('click',clearComparison);
 $('refresh').onclick = load;
 $('close').onclick = () => $('details').close();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(() => { if (!document.hidden) load(); }, 60000);
-load();
+$('chart-period').addEventListener('click', event => {
+  const button = event.target.closest('[data-count]'); if (!button) return;
+  state.chartCount = Number(button.dataset.count);
+  for (const item of $('chart-period').querySelectorAll('button')) item.setAttribute('aria-pressed',String(item===button));
+  renderChart();
+});
+$('export-csv').addEventListener('click', () => {
+  const assets = selectAssets(state.assets,state);
+  if (!assets.length) { toast('Não há ativos visíveis para exportar.'); return; }
+  const url = URL.createObjectURL(new Blob(['\uFEFF'+assetsToCSV(assets,state.data)],{type:'text/csv;charset=utf-8'}));
+  const link = element('a'); link.href=url; link.download=`radar-n10-${todayInBrazil()}.csv`; link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000); toast(`${assets.length} ${assets.length === 1 ? "ativo exportado" : "ativos exportados"} com origem e horário.`);
+});
+initMotion(); initInteractions(); load();

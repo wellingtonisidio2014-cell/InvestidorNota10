@@ -74,4 +74,10 @@ Layout refeito conforme proposta visual escolhida pelo usuário, com estrutura r
 
 Treze testes automatizados passaram: filtros, normalização, histórico, deduplicação de proventos, cache, stale, resposta parcial, concorrência e rotas HTTP. Validação inicial no navegador confirmou layout e tratamento de indisponibilidade; o preview não obteve dados externos, embora o adaptador Node tenha recebido os quatro ativos. Homologação da API no ambiente publicado permanece necessária. As pendências históricas acima devem ser lidas à luz desta atualização.
 
-Homologação publicada concluída em 04/11/2026: GET /api/assets retornou HTTP 200, mode=brapi, partial=false e stale=false, com PETR4, VALE3, ITUB4 e MGLU3; cada ativo trouxe 20 fechamentos históricos. Acesso de serviço autenticado manteve a audiência privada. O navegador de QA não tinha sessão ChatGPT para abrir a página publicada; fluxos interativos com dados reais nesse navegador permanecem sem homologação.
+## Evolução interativa — 04/11/2026
+
+O primeiro painel tinha hierarquia visual limitada, gráfico sem exploração e pouco feedback para ações. Foram adicionados SVG próprio, GSAP local, resumo da cobertura e controles de gráfico, favoritos, comparação e exportação. As animações são opcionais e respeitam movimento reduzido.
+
+Quinze testes passaram, incluindo CSV com ausências, números negativos, escape de aspas e proteção contra fórmulas externas. No navegador, foram verificados abertura/fechamento da ajuda, densidade, exportação vazia, favorito/desfazer, seleção/limpeza de comparação, busca filtrada, período de cinco pregões, leitura do gráfico pelo teclado e desligamento de animações. Os testes de interface utilizaram servidor de QA isolado e claramente rotulado com valores fictícios; nenhum fixture desse servidor é incluído na publicação. A integração real e a audiência privada foram preservadas.
+
+Documentação técnica consultada: https://gsap.com/docs/v3/GSAP/gsap.matchMedia()/ ; pacote oficial GSAP 3.15.1 obtido do registro npm, aviso original preservado. A data dos fechamentos diários usa UTC para evitar deslocamento de candles à véspera; horário da cotação continua em Brasília.

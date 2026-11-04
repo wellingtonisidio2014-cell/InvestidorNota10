@@ -3,6 +3,9 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {createProvider} from './provider.js';
 const files=new Map([['/',['index.html','text/html']],['/favicon.svg',['favicon.svg','image/svg+xml']],['/styles.css',['styles.css','text/css']],['/js/app.js',['js/app.js','text/javascript']],['/js/domain.js',['js/domain.js','text/javascript']]]);
+for (const name of ['motion','interactions','chart','export']) files.set(`/js/${name}.js`, [`js/${name}.js`, 'text/javascript']);
+for (const name of ['radar-orbit','icons']) files.set(`/art/${name}.svg`, [`art/${name}.svg`, 'image/svg+xml']);
+files.set('/vendor/gsap-3.15.1.min.js',['vendor/gsap-3.15.1.min.js','text/javascript']);
 export function makeServer(provider=createProvider({mode:process.env.DATA_PROVIDER||'brapi',token:process.env.BRAPI_TOKEN||''})) {
  return createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');
