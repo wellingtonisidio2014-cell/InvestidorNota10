@@ -53,3 +53,15 @@ Central de notificações no sino: padrão de 5%, configurável de 0,5% a 30%, a
 Avisos internos ativos por padrão, histórico de até 50 itens no navegador e marcação de lidos. Sem repetição por ação/direção/limite/dia de verificação; Web Locks evita concorrência entre abas quando disponível. Demonstração, resposta stale, coleta anterior a 2 min e cotações com horário conhecido anterior a 24 h não geram alertas. Cotações sem horário são aceitas com advertência explícita; o aviso não confirma oscilação em tempo real. O botão Testar aviso cria exemplo fictício rotulado.
 
 Avisos externos são opcionais via Notification API, só após clique e permissão. Não há service worker, push remoto ou monitoramento com site fechado. Polling ocorre a cada minuto com a aba visível. Dispositivos sem suporte continuam com central interna. Preferências/histórico são locais, sem sincronização entre dispositivos.
+
+## GitHub Pages
+
+`npm run build:pages` gera `dist-pages/` com caminhos relativos compatíveis com `/InvestidorNota10/`. Publique **o conteúdo** dessa pasta na raiz da branch `gh-pages` e selecione Settings → Pages → Deploy from a branch → gh-pages → /(root). `.nojekyll` mantém os arquivos sem processamento Jekyll.
+
+A versão estática consulta brapi, BCB e IBGE diretamente pelo navegador, sem chave nem servidor privado. Ela preserva tratamento de falhas, dados parciais e avisos de atraso; não garante cotações em tempo real. FIIs protegidos por chave não estão disponíveis nessa modalidade. Não adicione tokens ao frontend.
+
+A CVM não autoriza CORS: o build baixa o cadastro e publica apenas os campos dos quatro emissores integrados, com data de coleta e rótulo de cópia. Ele falha se não conseguir obter um cadastro válido. Refazer o build/publicação atualiza essa cópia; não há rotina automática de atualização. Consultas BCB/IBGE continuam independentes.
+
+Favoritos, preferências e histórico de alertas são locais a cada domínio, portanto não migram automaticamente do endereço anterior. Alertas só são avaliados enquanto a página está aberta e visível; avisos do sistema dependem da permissão do navegador.
+
+O backend Node e a hospedagem anterior permanecem compatíveis. O build estático não inclui `.env`, arquivos de servidor HTTP, tokens ou credenciais.
