@@ -1,3 +1,4 @@
+import {loadAssets} from './pages-data.js';
 import {initAlerts, processAlerts} from './alerts.js';
 import {loadSources, renderIssuer} from './sources.js';
 import {initMotion, reveal} from './motion.js';
@@ -155,9 +156,7 @@ async function load() {
   if (loading) return;
   loading = true; $('refresh').disabled = true; $('refresh').textContent = 'Consultando…'; $('explorar').setAttribute('aria-busy','true');
   try {
-    const response = await fetch('/api/assets', {signal:AbortSignal.timeout(90000)});
-    if (!response.ok) throw new Error('Fonte indisponível');
-    const data = await response.json();
+    const data = await loadAssets();
     if (!Array.isArray(data.assets)) throw new Error('Resposta inválida');
     state.data = data; state.assets = data.assets;
     const sectors=[...new Set(data.assets.map(a=>a.sector))].sort();
@@ -165,7 +164,7 @@ async function load() {
     for(const value of ['all',...sectors]){const option=element('option',value==='all'?'Todos os setores':value);option.value=value;$('sector').append(option);}
     if(!sectors.includes(state.sector))state.sector='all';$('sector').value=state.sector;
     $('connection').textContent = data.stale ? 'Dados preservados · fonte indisponível' : data.mode === 'demo' ? 'Demonstração · dados fictícios' : 'Fonte conectada · brapi.dev';
-    const restricted = `${data.marketListCount||0} ações na lista por volume; ${data.assets.filter(a=>a.coverage==='detailed').length} ativos com consulta detalhada. A lista resumida não informa horário da cotação. ${data.restrictedTickers?.length?'FIIs exigem configuração. ':''}${data.marketListUnavailable?'Lista ampliada indisponível nesta consulta. ':''}`;
+    const restricted = `${data.marketListCount||0} ações na lista por volume; ${data.assets.filter(a=>a.coverage==='detailed').length} ativos com consulta detalhada. A lista resumida não informa horário da cotação. ${data.restrictedTickers?.length?'FIIs precisam de um servidor com chave; indisponíveis nesta versão estática. ':''}${data.marketListUnavailable?'Lista ampliada indisponível nesta consulta. ':''}`;
     $('notice').textContent = `${data.mode === 'demo' ? 'VALORES FICTÍCIOS. ' : ''}${restricted}${data.stale ? 'Falha na fonte: últimos dados preservados. ' : ''}${data.failedTickers?.length ? `Detalhes indisponíveis: ${data.failedTickers.join(', ')}. ` : ''}Consulta: ${timestamp(data.fetchedAt)}. Atraso conforme fornecedor; confira o horário de cada cotação.`;
     renderTable(); renderWatchlist(); renderComparison(); renderDividends(); renderChart(); renderSummary(); processAlerts(data,state.favorites);
   } catch {

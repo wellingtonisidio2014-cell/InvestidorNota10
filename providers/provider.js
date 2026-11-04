@@ -1,6 +1,6 @@
 import {normalizeMarketList} from './market-list.js';
 import {catalog,demo} from './catalog.js';
-import {normalizeQuote} from '../public/js/domain.js';
+import {normalizeQuote} from '../js/domain.js';
 export function createProvider({mode='brapi',token='',fetcher=fetch,now=()=>Date.now()}={}) {
  if(!['demo','brapi'].includes(mode)) throw new Error('DATA_PROVIDER inválido');
  let cache,expires=0,pending,failed=false;

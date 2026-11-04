@@ -1,4 +1,4 @@
-import {numberOrNull} from '../public/js/domain.js';
+import {numberOrNull} from '../js/domain.js';
 export function normalizeMarketList(body) {
   if(!Array.isArray(body?.stocks))throw new Error('Lista de mercado inválida');
   const unique=new Map();

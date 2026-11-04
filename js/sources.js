@@ -1,3 +1,4 @@
+import {loadContext} from './pages-data.js';
 import {decimal} from './domain.js';
 let snapshot=null,request=null;
 const element=(tag,text,className)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;};
@@ -7,7 +8,7 @@ function link(source) {
   const a=element('a','Consultar fonte oficial ↗','text-link');a.href=source.reference;a.target='_blank';a.rel='noopener noreferrer';return a;
 }
 function status(source) {
-  return source.status==='available'?'Consulta concluída':source.status==='stale'?'Falha na atualização · dados anteriores':'Fonte indisponível';
+  return source.status==='snapshot'?'Cópia da publicação · consulte a data de coleta':source.status==='available'?'Consulta concluída':source.status==='stale'?'Falha na atualização · dados anteriores':'Fonte indisponível';
 }
 function renderSources() {
   const container=document.getElementById('official-cards');container.replaceChildren();
@@ -40,9 +41,7 @@ export function loadSources() {
   if(request)return request;
   request=(async()=>{
     try {
-      const response=await fetch('/api/context',{signal:AbortSignal.timeout(25000)});
-      if(!response.ok)throw new Error('Fonte indisponível');
-      const data=await response.json();if(!Array.isArray(data.sources))throw new Error('Resposta inválida');
+      const data=await loadContext();if(!Array.isArray(data.sources))throw new Error('Resposta inválida');
       snapshot=data;renderSources();
       const detail=document.querySelector('[data-issuer]');if(detail)renderIssuer(detail,detail.dataset.issuer);
     }catch{
