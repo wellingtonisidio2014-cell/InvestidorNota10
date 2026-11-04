@@ -5,9 +5,10 @@ export function selectAssets(assets, {query='',type='all',favoritesOnly=false,fa
 }
 export function normalizeQuote(raw,asset) {
  if(raw.symbol!==asset.ticker||raw.currency!=='BRL') throw new Error('Ativo ou moeda incompatível');
- const history=(Array.isArray(raw.historicalDataPrice)?raw.historicalDataPrice:[]).filter(p=>Number.isFinite(p.date)&&numberOrNull(p.close)!==null&&p.close>0).map(p=>({date:p.date*1000,close:p.close})).sort((a,b)=>a.date-b.date);
+ const points=(Array.isArray(raw.historicalDataPrice)?raw.historicalDataPrice:[]).filter(p=>Number.isFinite(p.date)&&Math.abs(p.date*1000)<=8640000000000000&&numberOrNull(p.close)!==null&&p.close>0).map(p=>({date:p.date*1000,close:p.close}));
+ const history=[...new Map(points.map(p=>[p.date,p])).values()].sort((a,b)=>a.date-b.date);
  const dividends=(Array.isArray(raw.dividendsData?.cashDividends)?raw.dividendsData.cashDividends:[]).filter(d=>numberOrNull(d.rate)!==null&&d.rate>=0&&Number.isFinite(Date.parse(d.paymentDate))).map(d=>({type:String(d.label||'Provento'),amount:d.rate,paymentDate:d.paymentDate.slice(0,10),recordDate:Number.isFinite(Date.parse(d.lastDatePrior))?d.lastDatePrior.slice(0,10):null,deadline:d.paymentDateIsDeadline===true}));
- return {...asset,price:numberOrNull(raw.regularMarketPrice),change:numberOrNull(raw.regularMarketChangePercent),pe:numberOrNull(raw.priceEarnings),dy:null,pb:null,asOf:Number.isFinite(Date.parse(raw.regularMarketTime))?new Date(raw.regularMarketTime).toISOString():null,history,dividends};
+ return {...asset,price:numberOrNull(raw.regularMarketPrice),change:numberOrNull(raw.regularMarketChangePercent),pe:numberOrNull(raw.priceEarnings),dy:null,pb:null,open:numberOrNull(raw.regularMarketOpen),dayHigh:numberOrNull(raw.regularMarketDayHigh),dayLow:numberOrNull(raw.regularMarketDayLow),previousClose:numberOrNull(raw.regularMarketPreviousClose),volume:numberOrNull(raw.regularMarketVolume),marketCap:numberOrNull(raw.marketCap),week52High:numberOrNull(raw.fiftyTwoWeekHigh),week52Low:numberOrNull(raw.fiftyTwoWeekLow),eps:numberOrNull(raw.earningsPerShare),asOf:Number.isFinite(Date.parse(raw.regularMarketTime))?new Date(raw.regularMarketTime).toISOString():null,history,dividends};
 }
 export function upcomingDividends(assets,today) {
  const unique=new Map();
